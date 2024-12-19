@@ -7,16 +7,23 @@
     };
 
     outputs = { self, nixpkgs, flake-utils }:
-    flake-utils.lib.eachSystem flake-utils.lib.defaultSystems (system: let
+    flake-utils.lib.eachDefaultSystem (system: let
             pkgs = import nixpkgs {
                 inherit system;
                 config.allowUnfree = true;
             };
         in {
-            devShells.default = throw "You need to specify which output you want: CPU, ROCm, or CUDA.";
-            devShells.cpu = import ./impl.nix { inherit pkgs; variant = "CPU"; };
-            devShells.cuda = import ./impl.nix { inherit pkgs; variant = "CUDA"; };
-            devShells.rocm = import ./impl.nix { inherit pkgs; variant = "ROCM"; };
+            devShells = rec {
+                cpu = import ./impl.nix { inherit pkgs; variant = "CPU"; };
+                cuda = import ./impl.nix { inherit pkgs; variant = "CUDA"; };
+                rocm = import ./impl.nix { inherit pkgs; variant = "ROCM"; };
+                default = nixpkgs.lib.warn ''
+                    To use a version with GPU support, specify which output you want:
+                      - nix develop .#cuda
+                      - nix develop .#rocm
+                    Defaulting to: nix develop .#cpu
+                '' cpu;
+            };
         }
     );
 }
